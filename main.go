@@ -4,12 +4,16 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync"
 )
 
 const (
-	listenAddr  = ":8000"
-	backendAddr = "localhost:9000"
+	listenAddr = ":8000"
 )
+
+var backends = []string{"localhost:9000", "localhost:9001", "localhost:9002"}
+var counter int
+var backendMu sync.Mutex
 
 func main() {
 
@@ -34,6 +38,13 @@ func main() {
 
 func handleConnection(clientConn net.Conn) {
 	defer clientConn.Close()
+	var backendAddr string
+
+	backendMu.Lock()
+	defer backendMu.Unlock()
+	counter = (counter + 1) % len(backends)
+	backendAddr = backends[counter]
+	backendMu.Unlock()
 
 	backendConn, err := net.Dial("tcp", backendAddr)
 
